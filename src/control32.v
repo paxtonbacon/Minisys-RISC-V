@@ -1,37 +1,50 @@
 `timescale 1ps/1ps
 
 module control32 (
-    input[6:0] Opcode,            // æ¥è‡ªå–æŒ‡å•å…ƒinst[6:0]
-    input[2:0] Funct3,            // æ¥è‡ªå–æŒ‡å•å…ƒinst[14:12]
-    input[6:0] Funct7,            // æ¥è‡ªå–æŒ‡å•å…ƒinst[31:25]
-    output reg [2:0] ExtOp,          // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤æ˜¯ç«‹å³æ•°æ‰©å±•æŒ‡ä»¤
-    output reg RegWr,        // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤éœ€è¦å†™å¯„å­˜å™¨
-    output reg MemWr,        // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤éœ€è¦å†™å­˜å‚¨å™¨
-    output reg MemOp,        // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤æ˜¯å­˜å‚¨å™¨æ“ä½œæŒ‡ä»¤
-    output reg MemtoReg,     // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤æ˜¯ä»å­˜å‚¨å™¨è¯»å–æ•°æ®åˆ°å¯„å­˜å™¨
-    output reg ALUASrc,      // ä¸º1è¡¨æ˜ALUçš„ç¬¬ä¸€ä¸ªæ“ä½œæ•°æ˜¯ç«‹å³æ•°
-    output reg [1:0] ALUBSrc,      // ä¸º1è¡¨æ˜ALUçš„ç¬¬äºŒä¸ªæ“ä½œæ•°æ˜¯ç«‹å³æ•°
-    output reg ALUctr,      // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤æ˜¯ALUæ“ä½œæŒ‡ä»¤
-    output reg Branch,       // ä¸º1è¡¨æ˜è¯¥æŒ‡ä»¤æ˜¯åˆ†æ”¯æŒ‡ä»¤   
+    input[6:0] Opcode,            // À´×ÔÈ¡Ö¸µ¥Ôªinst[6:0]
+    output [2:0] ExtOp,          // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇÁ¢¼´ÊıÀ©Õ¹Ö¸Áî
+    output RegWr,        // Îª1±íÃ÷¸ÃÖ¸ÁîĞèÒªĞ´¼Ä´æÆ÷
+    output MemWr,        // Îª1±íÃ÷¸ÃÖ¸ÁîĞèÒªĞ´´æ´¢Æ÷
+    // output MemOp,        // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇ´æ´¢Æ÷²Ù×÷Ö¸Áî
+    output MemtoReg,     // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇ´Ó´æ´¢Æ÷¶ÁÈ¡Êı¾İµ½¼Ä´æÆ÷
+    output ALUASrc,      // Îª1±íÃ÷ALUµÄµÚÒ»¸ö²Ù×÷ÊıÊÇÁ¢¼´Êı
+    output [1:0] ALUBSrc,      // 00=Á¢¼´Êı 01=¼Ä´æÆ÷ 10=³£Êı4
+    output LUIcode,         // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇLUIÖ¸Áî
+    output ALUctr,      // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇALU²Ù×÷Ö¸Áî
+    output [1:0] Branch      // Îª1±íÃ÷¸ÃÖ¸ÁîÊÇ·ÖÖ§Ö¸Áî
 );
+    localparam [6:0] R_TYPE = 7'b0110011;
+    localparam [6:0] I_TYPE = 7'b0010011;
+    localparam [6:0] LOAD = 7'b0000011;
+    localparam [6:0] STORE = 7'b0100011;
+    localparam [6:0] BRANCH = 7'b1100011;
+    localparam [6:0] JAL = 7'b1101111;
+    localparam [6:0] JALR = 7'b1100111;
+    localparam [6:0] LUI = 7'b0110111;
+    localparam [6:0] AUIPC = 7'b0010111;
 
-
-    assign ExtOp = (Opcode == 7'b0010011 || Opcode == 7'b0000011) ? 3'b000 : // I-type
-                   (Opcode == 7'b0100011) ? 3'b001 : // S-type
-                   (Opcode == 7'b1100011) ? 3'b010 : // B-type
-                   (Opcode == 7'b0110111 || Opcode == 7'b0010111) ? 3'b011 : // U-type
-                   (Opcode == 7'b1101111) ? 3'b100 : // J-type
+    assign ExtOp = (Opcode == I_TYPE || Opcode == LOAD || Opcode == JALR) ? 3'b000 : // I-type
+                   (Opcode == STORE) ? 3'b001 : // S-type
+                   (Opcode == BRANCH) ? 3'b010 : // B-type
+                   (Opcode == LUI || Opcode == AUIPC) ? 3'b011 : // U-type
+                   (Opcode == JAL) ? 3'b100 : // J-type
                    3'b000; // default
-    assign RegWr = (Opcode == 7'b0110011 || Opcode == 7'b0010011 || Opcode == 7'b0000011 || Opcode == 7'b1101111 || Opcode == 7'b0010111) ? 1'b1 : 1'b0;
-    assign MemWr = (Opcode == 7'b0100011) ? 1'b1 : 1'b0;
-    assign MemOp = (Opcode == 7'b0000011 || Opcode == 7'b0100011) ? 1'b1 : 1'b0;
-    assign MemtoReg = (Opcode == 7'b0000011) ? 1'b1 : 1'b0;
-    assign ALUASrc = (Opcode == 7'b0010011 || Opcode ==
-        7'b0000011 || Opcode == 7'b0100011 || Opcode == 7'b1101111 || Opcode == 7'b0010111) ? 1'b1 : 1'b0;
-    assign ALUBSrc = (Opcode == 7'b0010011 || Opcode == 7'b0000011 || Opcode == 7'b0100011 || Opcode == 7'b1101111 || Opcode == 7'b0010111) ? 2'b01 : // I-type, S-type, JAL, AUIPC
-                     (Opcode == 7'b0110011) ? 2'b00 : // R-type
-                     (Opcode == 7'b1100011) ? 2'b10 : // B-type
+    assign RegWr = (Opcode == R_TYPE || Opcode == I_TYPE || Opcode == LOAD || Opcode == JAL || 
+                    Opcode == JALR || Opcode == LUI || Opcode == AUIPC) ? 1'b1 : 1'b0;
+    assign MemWr = (Opcode == STORE) ? 1'b1 : 1'b0;
+    // assign MemOp = (Opcode == LOAD || Opcode == STORE) ? 1'b1 : 1'b0;  //Èç¹û²»ÔÚÕâÀï½øĞĞfunc3ÒëÂë£¬ÄÇÃ´ÆäÊµÃ»ÓĞ±ØÒªÓĞÕâ¸ö
+    assign MemtoReg = (Opcode == LOAD) ? 1'b1 : 1'b0;
+    assign ALUASrc = (Opcode == JAL || Opcode == JALR || Opcode == AUIPC) ? 1'b1 : 1'b0; //£¨È¡1Ê±ÊÇPC×÷ÎªµÚÒ»¸ö²Ù×÷Êı£©
+    assign ALUBSrc = (Opcode == I_TYPE || Opcode == LOAD || Opcode == STORE || Opcode == LUI || Opcode == AUIPC) ? 2'b00 : // 00=Á¢¼´Êı
+                     (Opcode == R_TYPE || Opcode == BRANCH) ? 2'b01 : // 01=¼Ä´æÆ÷
+                     (Opcode == JAL || Opcode == JALR) ? 2'b10 : // 10=³£Êı4£¨jal/jalr Ëã PC+4£©
                      2'b00; // default
-    assign ALUctr = (Opcode == 7'b0110011 || Opcode == 7'b0010011) ? 1'b1 : 1'b0;
-    assign Branch = (Opcode == 7'b1100011) ? 1'b1 : 1'b0;
+    assign LUIcode = (Opcode == LUI) ? 1'b1 : 1'b0;
+    assign ALUctr = (Opcode == R_TYPE || Opcode == I_TYPE || Opcode == LOAD
+                    || Opcode == STORE || Opcode == BRANCH || Opcode == JAL  
+                    ||  Opcode == JALR || Opcode == LUI || Opcode == AUIPC) ? 1'b1 : 1'b0; //ËùÓĞĞèÒªµ÷ÓÃALUµÄÖ¸Áî¶¼ĞèÒªALUctrÎª1
+    assign Branch = (Opcode == BRANCH) ? 2'b01 :
+                    (Opcode == JAL) ? 2'b10 : // jal
+                    (Opcode == JALR) ? 2'b11 : // jalr
+                     2'b00; // default
 endmodule
